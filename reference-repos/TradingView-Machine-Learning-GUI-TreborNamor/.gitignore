@@ -1,0 +1,12 @@
+*.xml
+*.pyc
+*.log
+geckodriver.log
+venv
+debug.log
+*.log
+*.iml
+*.log
+geckodriver.log
+.idea/.name
+geckodriver.log

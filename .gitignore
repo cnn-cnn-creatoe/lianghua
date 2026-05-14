@@ -1,0 +1,28 @@
+.remote-lianghua-check/
+.superpowers/
+
+# Frontend local/runtime output
+quant-ui/node_modules/
+quant-ui/dist/
+quant-ui/.vite/
+quant-ui/*.log
+quant-ui/tsconfig.tsbuildinfo
+
+# Local environment
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
+
+# Common caches
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.venv/
+**/venv/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

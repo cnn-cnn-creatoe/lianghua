@@ -1,0 +1,184 @@
+<p align="center">
+<img src="./tdx2db.png" width="300"/>
+</p>
+
+# tdx2db - 获得专属的 A 股行情数据库
+
+[![GitHub release](https://img.shields.io/github/v/release/jing2uo/tdx2db?style=flat-square)](https://github.com/jing2uo/tdx2db/releases)
+[![Docker Image](https://img.shields.io/badge/docker-pull-blue?style=flat-square&logo=docker)](https://github.com/jing2uo/tdx2db/pkgs/container/tdx2db)
+[![License](https://img.shields.io/github/license/jing2uo/tdx2db?style=flat-square)](LICENSE)
+
+## 概述
+
+`tdx2db` 是一个高效的工具，用于将通达信数据导入本地数据库，支持 DuckDB 和 ClickHouse。
+
+## 亮点
+
+- **增量更新**: 支持间隔数天后数据补全，维护简单
+- **分时数据**: 支持导入 1 分钟分时数据
+- **复权计算**: 自动计算前后复权因子，因子支持分时使用
+- **衍生指标**: 自动计算换手率和市值信息
+- **稳定可靠**: 基于通达信数据，不依赖收费或限流接口
+
+## 声明
+
+- 代码不会兼容历史版本且会写出 bug，请谨慎检查数据正确性，不对你的损失负责。
+- 如果导入了分时请保留原始数据并定期备份，数据更新出问题日线可以快速还原，分时很麻烦。
+- 使用遇到问题可以来 [Telegram](https://t.me/tdx2db) 讨论，即时沟通。
+
+## 安装说明
+
+### 使用二进制
+
+从 [releases](https://github.com/jing2uo/tdx2db/releases) 下载对应平台的压缩包，解压后移至 `$PATH`：
+
+```bash
+sudo mv tdx2db /usr/local/bin/ && tdx2db -h
+```
+
+目前提供 Linux (amd64/arm64)、macOS (arm64)、Windows (amd64) 预编译二进制。其中分钟数据目前仅在 Linux 上支持，Windows / macOS 会跳过分时数据，日线正常处理。
+
+### 使用 docker
+
+项目会利用 github action 构建容器镜像，也可以通过 docker 使用:
+
+```bash
+docker run --rm --platform=linux/amd64 ghcr.io/jing2uo/tdx2db:latest -h
+```
+
+## 导入到数据库
+
+### 初始化
+
+首次使用需要全量导入历史数据，可以从 [通达信券商数据](https://www.tdx.com.cn/article/vipdata.html) 下载**沪深京日线数据完整包**。
+
+下载文件:
+
+```shell
+# linux mac
+mkdir -p vipdoc
+wget https://data.tdx.com.cn/vipdoc/hsjday.zip && unzip -q hsjday.zip -d vipdoc
+
+# 若 unzip 解压后文件名如 sh\lday\sh000001.day，可以批量重命名
+# cd vipdoc
+# for f in *.day; do mv "$f" "${f##*\\}"; done
+
+# windows powershell
+Invoke-WebRequest -Uri "https://data.tdx.com.cn/vipdoc/hsjday.zip" -OutFile "hsjday.zip"
+Expand-Archive -Path "hsjday.zip" -DestinationPath "vipdoc" -Force
+```
+
+二进制:
+
+```shell
+  # 导入 DuckDB, dburi 格式： duckdb://[path]，path 支持相对路径
+  tdx2db init --dburi 'duckdb://./tdx.db' --dayfiledir ./vipdoc
+
+  # 导入 ClickHouse, dburi 格式： clickhouse:[user[:password]@][host][:port][/database][?http_port=value1&param2=value2&...]
+  tdx2db init --dburi 'clickhouse://default:123456@localhost:9000/mydb?http_port=8123' --dayfiledir ./vipdoc
+
+  # ClickHouse 有以下默认值: user=default, password="", port=9000, http_port=8123, database=default，可以根据情况简写
+  tdx2db init --dburi 'clickhouse://localhost' --dayfiledir ./vipdoc
+```
+
+docker:
+
+```shell
+# linux、mac docker
+docker run --rm --platform=linux/amd64 -v "$(pwd)":/data \
+  ghcr.io/jing2uo/tdx2db:latest \
+  init --dayfiledir /data/vipdoc --dburi 'duckdb:///data/tdx.db'
+
+# windows docker
+docker run --rm --platform=linux/amd64 -v "${PWD}:/data" \
+  ghcr.io/jing2uo/tdx2db:latest \
+  init --dayfiledir /data/vipdoc --dburi 'duckdb:///data/tdx.db'
+
+# 后续不再提示 docker 用法, 根据二进制示例修改第三行命令即可
+```
+
+**必填参数**:
+
+- `--dayfiledir`: 通达信 .day 文件所在目录
+- `--dburi`: 数据库连接信息
+
+### 增量更新
+
+cron 命令会更新股票数据、股本变迁数据到最新日期，并计算前收盘价和复权因子。
+
+初次使用时，请在 init 后立刻执行一次 cron。
+
+```bash
+tdx2db cron --dburi 'duckdb://tdx.db'    # ClickHouse schema 参考 init 部分
+```
+
+**必填参数**:
+
+- `--dburi`: 数据库连接信息
+
+### 分时数据
+
+cron 命令支持 1 分钟分时数据导入。
+
+```bash
+# 加 --min 才会下载并导入 1 分钟分时
+tdx2db cron --dburi 'duckdb://tdx.db' --min
+```
+
+**注意**
+
+1. 分时数据下载和导入耗时，表数据量大
+2. 通达信没提供历史分时数据，请自行检索后导入
+3. 分时更新间隔超过 30 天以上，需手动补齐数据后才能继续处理
+4. 股票代码变更不会处理历史记录
+
+### 表查询
+
+raw\_ 前缀的表名用于存储基础数据，v\_ 前缀的表名是视图。
+
+| 表/视图名               | 说明                          |
+| :---------------------- | :---------------------------- |
+| `_meta`                 | 元信息 (schema 版本等)        |
+| `raw_adjust_factor`     | 复权因子表                    |
+| `raw_gbbq`              | 股本变迁数据                  |
+| `raw_holidays`          | 假期日历                      |
+| `raw_kline_1min`        | 1 分钟 K 线                   |
+| `raw_kline_daily`       | 日线数据 (股票/指数/ETF/板块) |
+| `raw_basic_daily`       | 股票/ETF 前收盘价、换手率与市值 |
+| `raw_symbol_class`      | 品种分类 (stock/index/etf/等) |
+| `v_stock_bfq`           | 股票不复权日线                |
+| `v_stock_qfq`           | 股票前复权日线                |
+| `v_stock_hfq`           | 股票后复权日线                |
+| `v_etf_bfq`             | ETF 不复权日线                |
+| `v_etf_qfq`             | ETF 前复权日线                |
+| `v_etf_hfq`             | ETF 后复权日线                |
+
+视图按 `v_<class>_<fq>` 命名，class 放前面便于 tab-complete 按归属浏览。股票价格精度 2 位、ETF 3 位，由各自视图直接 ROUND。
+
+```sql
+# 股票前复权
+select * from v_stock_qfq where symbol='sz000001' order by date;
+
+# ETF 后复权
+select * from v_etf_hfq where symbol='sh510300' order by date;
+```
+
+复权算法来自 QUANTAXIS，原理参考：[点击查看](https://www.yuque.com/zhoujiping/programming/eb17548458c94bc7c14310f5b38cf25c#djL6L)，复权结果和 QUANTAXIS、通达信等比复权一致；其中前复权结果和雪球、新浪也一致。
+
+## 通达信数据转 CSV
+
+convert 命令支持转换通达信日线、分时文件和四代行情、TIC 压缩包到 CSV，四代数据可以在 [每日数据](https://www.tdx.com.cn/article/daydata.html) 下载。
+
+```shell
+tdx2db convert -t day -i ./vipdoc/ -o ./   # 转换 .day 日线文件
+tdx2db convert -h   # 其他类型查看 help
+```
+
+## 致谢
+
+- Windows 和 macOS 下的日线合并由 [@Abelonx](https://github.com/Abelonx) 在 [#60](https://github.com/jing2uo/tdx2db/pull/60) 贡献的 native Go 实现支持，让 tdx2db 摆脱了对 Linux datatool 二进制的依赖。
+
+
+## 欢迎 issue 和 pr
+
+有任何使用问题都可以开 issue 讨论，也期待 pr~
