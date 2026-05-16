@@ -22,7 +22,7 @@ export type AshareQuote = {
   limitDown: number;
   volRatio: number;
   peStatic: number;
-  source: "Tencent" | "Eastmoney" | "Sina" | "Fallback";
+  source: "AkShare" | "Tencent" | "Eastmoney" | "Sina" | "Fallback";
 };
 
 export type HotStock = {
@@ -468,6 +468,49 @@ async function fetchJson(fetcher: Fetcher, url: string): Promise<unknown> {
   return JSON.parse(text);
 }
 
+function parseAkshareQuotes(payload: unknown): AshareQuote[] {
+  const rows = (payload as { quotes?: Record<string, unknown>[] }).quotes ?? [];
+  return rows.map((item) => {
+    const code = String(item.code ?? item.symbol ?? "").replace(/\D/g, "").slice(-6);
+    const previousClose = numberOrZero(item.previousClose);
+    const price = numberOrZero(item.price);
+    return {
+      symbol: toTencentSymbol(code),
+      code,
+      name: String(item.name ?? code),
+      price,
+      previousClose,
+      open: numberOrZero(item.open) || previousClose,
+      changeAmount: numberOrZero(item.changeAmount) || Number((price - previousClose).toFixed(3)),
+      changePct: numberOrZero(item.changePct),
+      high: numberOrZero(item.high) || price,
+      low: numberOrZero(item.low) || price,
+      amountWan: numberOrZero(item.amountWan),
+      turnoverPct: numberOrZero(item.turnoverPct),
+      peTtm: numberOrZero(item.peTtm),
+      amplitudePct: numberOrZero(item.amplitudePct),
+      mcapYi: numberOrZero(item.mcapYi),
+      floatMcapYi: numberOrZero(item.floatMcapYi),
+      pb: numberOrZero(item.pb),
+      limitUp: numberOrZero(item.limitUp),
+      limitDown: numberOrZero(item.limitDown),
+      volRatio: numberOrZero(item.volRatio),
+      peStatic: numberOrZero(item.peStatic),
+      source: "AkShare" as const
+    };
+  }).filter((quote) => quote.code.length === 6 && quote.price > 0);
+}
+
+async function fetchAkshareQuotes(fetcher: Fetcher, codes: string[]): Promise<AshareQuote[]> {
+  const symbols = uniqueItems(codes.map((code) => code.replace(/\D/g, "").slice(-6)).filter(Boolean)).join(",");
+  const payload = await fetchJson(fetcher, `/api/akshare/quotes?symbols=${encodeURIComponent(symbols)}`);
+  const rows = parseAkshareQuotes(payload);
+  if (!rows.length) {
+    throw new Error("AkShare quote payload is empty");
+  }
+  return rows;
+}
+
 async function fetchTencentQuotes(fetcher: Fetcher, codes: string[]): Promise<AshareQuote[]> {
   const symbols = codes.map(toTencentSymbol).join(",");
   const response = await fetcher(`/api/tencent/q=${symbols}`);
@@ -676,6 +719,13 @@ function buildInterfaceSummary(): InterfaceSummary[] {
       frontendStatus: "已接入"
     },
     {
+      name: "Eastmoney push2his kline",
+      category: "分钟/日/周/月 K 线",
+      source: "efinance / 东财公开接口",
+      capability: "个股 1m、5m、15m、30m、60m、日线、周线、月线 OHLCV，点击股票后实时刷新",
+      frontendStatus: "已接入"
+    },
+    {
       name: "THS hot reason",
       category: "板块/题材信号",
       source: "a-stock-data 6.1",
@@ -781,7 +831,9 @@ export async function loadAshareDashboard(
 ): Promise<AshareDashboard> {
   const timedFetcher = withTimeout(fetcher);
   const allTencentCodes = uniqueItems([...INDEX_SYMBOLS, ...WATCH_SYMBOLS, selectedCode]);
-  const [quoteResult, sinaResult, marketListResult, hotResult, conceptResult, fundResult, dragonResult] = await Promise.all([
+  const allStockCodes = uniqueItems([...WATCH_SYMBOLS, selectedCode]);
+  const [akshareResult, quoteResult, sinaResult, marketListResult, hotResult, conceptResult, fundResult, dragonResult] = await Promise.all([
+    safeLoad("AkShare 本地实时行情", () => fetchAkshareQuotes(timedFetcher, allStockCodes), [] as AshareQuote[]),
     safeLoad(
       "腾讯财经实时行情",
       () => fetchTencentQuotes(timedFetcher, allTencentCodes),
@@ -800,6 +852,7 @@ export async function loadAshareDashboard(
   ]);
 
   const sources: SourceResult<unknown>[] = [
+    akshareResult,
     quoteResult,
     sinaResult,
     marketListResult,
@@ -809,17 +862,19 @@ export async function loadAshareDashboard(
     dragonResult
   ];
   const indices = uniqueQuotes(quoteResult.data.filter(isIndexQuote));
+  const akshareQuotes = uniqueQuotes(akshareResult.status === "live" ? akshareResult.data : []);
   const directQuotes = quoteResult.status === "live"
     ? uniqueQuotes(quoteResult.data.filter((quote) => !isIndexQuote(quote)))
     : [];
   const sinaQuotes = uniqueQuotes(sinaResult.data);
   const marketQuotes = uniqueQuotes(marketListResult.status === "live" ? marketListResult.data : []);
   const quotes = uniqueQuotes(
-    [...marketQuotes, ...directQuotes, ...sinaQuotes].length
-      ? [...marketQuotes, ...directQuotes, ...sinaQuotes]
+    [...akshareQuotes, ...marketQuotes, ...directQuotes, ...sinaQuotes].length
+      ? [...akshareQuotes, ...marketQuotes, ...directQuotes, ...sinaQuotes]
       : fallbackAshareDashboard.quotes
   );
   const selectedStock =
+    akshareQuotes.find((quote) => quote.code === selectedCode) ??
     directQuotes.find((quote) => quote.code === selectedCode) ??
     sinaQuotes.find((quote) => quote.code === selectedCode) ??
     quotes.find((quote) => quote.code === selectedCode) ??

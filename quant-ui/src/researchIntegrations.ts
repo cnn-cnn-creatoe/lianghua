@@ -58,6 +58,62 @@ export const repositoryFindings: RepositoryFinding[] = [
     localPath: "reference-repos/Ashare",
     capabilities: ["get_price()", "日线/周线/月线", "1m/5m/15m/30m/60m", "DataFrame 输出"],
     frontendUse: "作为少量股票历史行情和分钟线补充源，适合快速研究和回测样本补齐。"
+  },
+  {
+    repo: "akshare",
+    role: "免费财经数据接口库",
+    localPath: "GitHub: akfamily/akshare",
+    capabilities: ["A 股实时行情", "历史 K 线", "分钟线", "宏观/基金/期货/美股"],
+    frontendUse: "适合作为后端 Python 数据适配层；本轮前端先直接接东财公开 K 线接口。"
+  },
+  {
+    repo: "efinance",
+    role: "东财公开行情封装参考",
+    localPath: "GitHub: Micro-sheep/efinance",
+    capabilities: ["股票实时行情", "日 K/分钟 K", "基金/期货", "免费开源 Python 库"],
+    frontendUse: "用于确认东财行情 ID、K 线字段和多周期能力，当前已转成前端 fetch 服务。"
+  },
+  {
+    repo: "efinance-go",
+    role: "Go 版东财行情封装参考",
+    localPath: "GitHub: T1anjiu/efinance-go",
+    capabilities: ["沪深 A 股", "K 线（日/周/月/分钟）", "实时行情", "行情 ID 自动解析"],
+    frontendUse: "作为后续服务端化时的轻量数据服务候选。"
+  },
+  {
+    repo: "TradingAgents-CN",
+    role: "A 股多智能体投研参考",
+    localPath: "GitHub: hsliuping/TradingAgents-CN",
+    capabilities: ["中文界面", "A 股分析", "多 LLM 提供商", "研究报告导出"],
+    frontendUse: "用于补齐 A 股 AI 投研页的分析师角色、研究进度和合规提示。"
+  },
+  {
+    repo: "Vibe-Trading",
+    role: "研究运行卡与影子账户参考",
+    localPath: "GitHub: HKUDS/Vibe-Trading",
+    capabilities: ["Shadow Account", "跨市场回测", "run_card", "Pine/TDX/MT5 导出"],
+    frontendUse: "用于策略模拟页展示自然语言策略、静态模拟账本和可审计研究产物。"
+  },
+  {
+    repo: "FinceptTerminal",
+    role: "多资产终端信息架构参考",
+    localPath: "GitHub: Fincept-Corporation/FinceptTerminal",
+    capabilities: ["多资产分析", "100+ 数据连接器", "AI Agents", "Portfolio"],
+    frontendUse: "用于美股/加密工作台的高密度终端布局和数据连接器矩阵。"
+  },
+  {
+    repo: "freqtrade",
+    role: "加密 dry-run 与 WebUI 参考",
+    localPath: "GitHub: freqtrade/freqtrade",
+    capabilities: ["Dry-run", "Backtesting", "WebUI", "策略优化"],
+    frontendUse: "用于加密策略队列、模拟订单、风险提示和不接交易所的边界表达。"
+  },
+  {
+    repo: "vnpy",
+    role: "仿真账户与风控参考",
+    localPath: "GitHub: vnpy/vnpy",
+    capabilities: ["CTA 回测", "Paper Account", "Risk Manager", "事件驱动"],
+    frontendUse: "用于 A 股模拟交易、持仓、风控拦截和组合管理的前端结构。"
   }
 ];
 
@@ -70,6 +126,15 @@ export const dataImportSources: DataImportSource[] = [
     command: "tdx2db init --dburi duckdb://./tdx.db --dayfiledir ./vipdoc",
     note: "适合做 A 股历史回测主库，前端目前展示导入方案，实际执行需要后端任务。",
     tone: "blue"
+  },
+  {
+    name: "Eastmoney push2his",
+    status: "ready",
+    input: "股票代码 + 周期 klt + 复权参数",
+    outputs: ["1m/5m/15m/30m/60m", "日线", "周线", "月线"],
+    command: "/api/qt/stock/kline/get?secid=0.300750&klt=1&fqt=1",
+    note: "本轮已接入前端 Vite 代理，点击股票即可刷新公开 K 线数据。",
+    tone: "green"
   },
   {
     name: "Ashare",
@@ -158,7 +223,8 @@ export const backtestMetrics = [
   { label: "回测测试", value: "3 套", tone: "blue" as const },
   { label: "导入来源", value: "3 个", tone: "green" as const },
   { label: "执行模式", value: "研究", tone: "amber" as const },
-  { label: "下单能力", value: "未接入", tone: "green" as const }
+  { label: "下单能力", value: "未接入", tone: "green" as const },
+  { label: "模拟交易", value: "静态展示", tone: "blue" as const }
 ];
 
 export function getBacktestReadiness() {

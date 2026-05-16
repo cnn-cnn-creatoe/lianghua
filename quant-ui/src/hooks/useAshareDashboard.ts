@@ -32,7 +32,7 @@ export function useAshareDashboard(selectedCode: string) {
     void refresh();
     const interval = window.setInterval(() => {
       void refresh();
-    }, 30000);
+    }, 8000);
 
     return () => window.clearInterval(interval);
   }, [refresh]);

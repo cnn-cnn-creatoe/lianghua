@@ -1,9 +1,10 @@
 {
   "name": "lianghua-quant-ui",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
+    "api": "python server/akshare_api.py",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "test": "vitest run"

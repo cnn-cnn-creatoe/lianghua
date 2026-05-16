@@ -12,8 +12,24 @@ describe("QuantForge shell", () => {
 
     expect(screen.getByText("量化工坊")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "A 股" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "加密货币" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "美股 / 加密" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "A 股数据总览" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "模拟策略交易" })).toBeInTheDocument();
+    expect(screen.getByText("不接真实下单")).toBeInTheDocument();
+  });
+
+  it("switches to the global US equities and crypto workspace", async () => {
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "A 股数据总览" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "美股 / 加密" }));
+
+    expect(screen.getByRole("heading", { name: "美股 / 加密数据总览" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "美股 / 加密观察池" })).toBeInTheDocument();
+    expect(screen.getAllByText("NVIDIA").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Bitcoin").length).toBeGreaterThan(0);
+    expect(screen.getByText("不接真实下单")).toBeInTheDocument();
   });
 
   it("renders A-share live data surfaces", async () => {
@@ -21,9 +37,22 @@ describe("QuantForge shell", () => {
 
     expect(await screen.findByRole("heading", { name: "A 股数据总览" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "主要指数" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "宁德时代 实时 K 线" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1m" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "实时行情列表" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "股票详情" })).toBeInTheDocument();
     expect(screen.getByText("接口失败保留示例数据")).toBeInTheDocument();
+  });
+
+  it("clicks an A-share stock and updates the realtime kline panel", async () => {
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "宁德时代 实时 K 线" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /贵州茅台/ })[0]);
+
+    expect(await screen.findByRole("heading", { name: "贵州茅台 实时 K 线" })).toBeInTheDocument();
+    expect(screen.getByText("东方财富 push2his K 线")).toBeInTheDocument();
   });
 
   it("switches sidebar pages instead of keeping every module on one screen", async () => {
@@ -34,6 +63,7 @@ describe("QuantForge shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "数据中心" }));
     expect(screen.getByRole("heading", { name: "数据中心" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "接口需求梳理" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "开源参考矩阵" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "A 股数据总览" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "复盘报告" }));
@@ -50,7 +80,14 @@ describe("QuantForge shell", () => {
     expect(screen.getByRole("heading", { name: "回测测试中心" })).toBeInTheDocument();
     expect(screen.getAllByText("stock-quant").length).toBeGreaterThan(0);
     expect(screen.getAllByText("EnhancedVolumeStrategy").length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByLabelText("自然语言策略描述"), {
+      target: { value: "5日均线上穿20日均线，成交量放大时买入" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: /生成回测/ }));
+    expect(await screen.findByText(/Local fallback strategy template/)).toBeInTheDocument();
+    expect(screen.getByText(/ak\.stock_zh_a_daily/)).toBeInTheDocument();
     expect(screen.getByText("研究回测，不接入下单")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "模拟策略交易" })).toBeInTheDocument();
   });
 
   it("shows the local data import plan in the data center", async () => {
@@ -62,7 +99,21 @@ describe("QuantForge shell", () => {
     expect(screen.getByRole("heading", { name: "本地数据导入" })).toBeInTheDocument();
     expect(screen.getAllByText("tdx2db").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Ashare").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Eastmoney push2his").length).toBeGreaterThan(0);
     expect(screen.getAllByText("DuckDB").length).toBeGreaterThan(0);
+  });
+
+  it("clicks a crypto asset and updates the Binance kline panel", async () => {
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "A 股数据总览" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "美股 / 加密" }));
+
+    expect(await screen.findByRole("heading", { name: "Bitcoin 实时 K 线" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /ETHUSDT/ }));
+
+    expect(await screen.findByRole("heading", { name: "Ethereum 实时 K 线" })).toBeInTheDocument();
+    expect(screen.getByText("Binance Spot API Klines")).toBeInTheDocument();
   });
 
   it("uses Chinese labels for visible shell and section text", async () => {

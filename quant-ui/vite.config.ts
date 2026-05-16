@@ -10,6 +10,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/tencent/, "")
       },
+      "/api/akshare": {
+        target: "http://127.0.0.1:8765",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/akshare/, "")
+      },
       "/api/sina": {
         target: "https://hq.sinajs.cn",
         changeOrigin: true,
@@ -30,6 +35,24 @@ export default defineConfig({
         target: "https://push2.eastmoney.com",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/eastmoney-push2/, "")
+      },
+      "/api/eastmoney-his": {
+        target: "https://push2his.eastmoney.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/eastmoney-his/, ""),
+        headers: {
+          Referer: "https://quote.eastmoney.com/"
+        }
+      },
+      "/api/binance-data": {
+        target: "https://data-api.binance.vision",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/binance-data/, "")
+      },
+      "/api/binance": {
+        target: "https://api.binance.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/binance/, "")
       },
       "/api/ths": {
         target: "http://zx.10jqka.com.cn",
