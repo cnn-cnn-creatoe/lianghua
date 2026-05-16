@@ -1,45 +1,56 @@
 # 数据源与参考项目
 
-本文件记录 v1.0.0 阶段纳入调研和前端设计的数据源、回测、TradingView 与 UI 参考项目。`reference-repos/` 中保留的是源码快照，便于查看接口实现和后续二次封装。
+本文档记录 `lianghua` v1.0.1 阶段纳入调研、前端展示和本地数据服务的行情源、回测源与开源参考项目。`reference-repos/` 中保留的是源码快照，便于离线查看接口实现和后续二次封装。
 
-## A 股行情与基础数据
+## A 股行情与历史数据
 
-| 项目 | 用途 | 当前接入状态 |
+| 项目 / 接口 | 用途 | 当前接入状态 |
 | --- | --- | --- |
-| `a-stock-data` | 腾讯财经、东方财富、同花顺、百度股市通等公开接口参考 | 已用于 A 股行情适配层设计 |
-| `adata` | A 股实时行情、股票列表、基础信息、市场数据 | 已作为实时数据能力补充参考 |
-| `Ashare` | 轻量 A 股行情获取 | 已作为备选行情接口参考 |
-| `tdx2db` | 通达信数据导入、本地数据库落库 | 已用于数据导入模块规划 |
+| AkShare `stock_zh_a_minute` | A 股分钟 K 线，支持 1m、5m、15m、30m、60m | 已通过 `quant-ui/server/akshare_api.py` 接入 |
+| AkShare `stock_zh_a_daily` | A 股前复权日线，用于日 K 与历史回测 | 已接入回测实验室 |
+| 腾讯公开行情 | A 股实时价格、涨跌幅、成交额、估值字段 | 作为本地 AkShare 服务的实时行情兼容源 |
+| 东方财富 push2his | A 股 K 线公开接口 | 作为前端 K 线回退源 |
+| `a-stock-data` | 腾讯财经、东方财富、同花顺、百度股市通等公开接口参考 | 用于 A 股行情适配层设计 |
+| `adata` | A 股实时行情、股票列表、基础信息、市场数据 | 作为实时数据能力补充参考 |
+| `Ashare` | 轻量 A 股行情获取 | 作为备用行情接口参考 |
+| `tdx2db` | 通达信数据导入、本地数据库落库 | 用于后续本地历史数据仓库规划 |
+
+## 美股与加密货币
+
+| 项目 / 接口 | 用途 | 当前接入状态 |
+| --- | --- | --- |
+| Binance Spot Klines | BTC、ETH、SOL 等加密资产公共 K 线 | 已通过 Vite 代理接入，不需要 API key |
+| Binance Vision Data API | Binance 公共数据镜像 | 作为加密 K 线优先源 |
+| TradingView 相关项目 | 美股、加密、指标与图表交互参考 | 用于界面结构与后续指标能力扩展 |
 
 ## 回测与策略研究
 
 | 项目 | 用途 | 当前接入状态 |
 | --- | --- | --- |
-| `stock-quant` | 股票量化分析、策略测试、任务组织 | 已用于回测测试界面和后续服务端规划 |
-| `awesome-systematic-trading` | 系统化交易资料索引 | 作为策略研究和软件选择资料库 |
+| 本地 AkShare Backtest API | 根据自然语言策略生成 Python 回测代码并运行历史回测 | 已接入 |
+| `stock-quant` | 股票量化分析、策略测试、任务组织 | 用于回测实验室信息架构参考 |
+| `awesome-systematic-trading` | 系统化交易资料索引 | 作为策略研究资料库 |
+| `PineTS` | Pine Script 运行与兼容思路 | 后续指标策略引擎参考 |
 
-## TradingView 与跨市场能力
+## FinceptTerminal 启发点
 
-| 项目 | 用途 | 当前接入状态 |
-| --- | --- | --- |
-| `TradingView-API` | TradingView 数据接口参考 | 后续扩展 K 线和指标数据 |
-| `tradingViewWikiCn` | TradingView / Pine Script 中文资料 | 策略说明和脚本研究参考 |
-| `TradingView-data-scraper` | TradingView 数据抓取参考 | 后续跨市场数据抓取参考 |
-| `TradingView-Machine-Learning-GUI-TreborNamor` | TradingView + 机器学习 GUI 参考 | 后续策略实验参考 |
-| `PineTS` | Pine Script 运行/兼容思路 | 后续指标策略引擎参考 |
-| `python-tradingview-ta` | TradingView 技术分析封装 | 后续指标信号参考 |
-| `lightweight-charts-python` | K 线图和行情可视化参考 | 后续图表能力参考 |
-| `awesome-tradingview` | TradingView 生态资料索引 | 资料库 |
+FinceptTerminal 中的 AkShare 数据封装用于本轮数据源设计参考。本项目没有复制其代码，而是参考其“统一数据源适配层”的思路，在本地实现：
 
-## UI / UX 设计参考
+- `/quotes`：A 股实时行情。
+- `/kline`：A 股分钟线、日线、周线、月线。
+- `/backtest`：A 股历史数据回测与代码生成。
 
-| 项目 | 用途 | 当前接入状态 |
-| --- | --- | --- |
-| `frontend-design` | Claude frontend design、ui-ux-pro-max 等设计参考 | 已用于当前量化前端视觉和布局方向 |
+## 密钥策略
+
+当前所有已接入能力都不需要用户密钥。
+
+- AkShare 与公开行情接口不读取用户 API key。
+- Binance 当前只使用公共 K 线，不使用交易所账户密钥。
+- 项目不保存账户、密码、券商凭证或交易所 Secret。
+- `.env` 系列文件已被 `.gitignore` 排除，后续私有密钥只能放在本地环境变量或服务端配置中。
 
 ## 当前前端数据策略
 
-- 页面不直接拼接第三方接口，统一走 `quant-ui/src/services/ashareData.ts`。
-- 数据请求失败、字段缺失或接口限流时，保留本地示例数据，页面显示降级状态。
-- 当前只展示公开行情和研究信息，不做交易、下单、账户、登录、券商 API 对接。
-- 后续如果要稳定实时刷新，建议增加后端服务层，统一处理缓存、限流、字段归一化和本地历史数据落库。
+- 页面不直接拼接复杂第三方逻辑，统一通过 `quant-ui/src/services/*` 与本地 API 服务适配。
+- 数据请求失败、字段缺失或接口限流时，页面保留回退数据与降级状态，避免空白。
+- 当前只展示公开行情、研究信号、模拟订单和历史回测，不做真实交易、下单、账户登录或券商 API 对接。
